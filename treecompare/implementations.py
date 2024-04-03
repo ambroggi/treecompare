@@ -20,7 +20,7 @@ class ImplementationBase(object):
         options = self.differ_options
         if isinstance(self.differ_options, dict):
             options = ()
-            for pattern, opts in self.differ_options.iteritems():
+            for pattern, opts in self.differ_options.items():
                 if re.search(pattern, self.path_string):
                     options += opts if isinstance(opts, tuple) else (opts,)
         return options
@@ -96,14 +96,14 @@ class DiffPrimitives(ImplementationBase):
             return self.different("expected %r, got %r" % (expected, actual))
 
 class DiffNumbers(DiffPrimitives):
-    diffs_types = (int, long, float)
+    diffs_types = (int, float)
     
 
 class DiffText(DiffPrimitives):
     NDIFF_THRESHOLD = 32
-    diffs_types = basestring
+    diffs_types = str
     def diff(self, expected, actual):
-        if not isinstance(expected, basestring):
+        if not isinstance(expected, str):
             return self.different("expected %r, got %r" % (expected, actual))
         expected_comparable, actual_comparable = expected, actual
         if 'ignore_case' in self.options:
@@ -166,7 +166,7 @@ class ChildDiffingMixing(object):
                     return path, child
 
 
-        return filter(None, map(get_keyd, children)), unkeyed
+        return [x for x in filter(None, map(get_keyd, children))], unkeyed
     
     def filtered_path_and_child(self, diffable):
         for path, child in self.path_and_child(diffable):
@@ -202,12 +202,12 @@ class ChildDiffingMixing(object):
         def no_match(path_and_child):
             path, actual_child = path_and_child
             with self.diffing_child(path) as node:
-                for path, expected_child in unmatched_expected.iteritems():
+                for path, expected_child in unmatched_expected.items():
                     if node.matches(expected_child, actual_child):
                         del unmatched_expected[path]
                         return False
                 return True
-        unmatched_actual = filter(no_match, unkeyed_actual)
+        unmatched_actual = [x for x in filter(no_match, unkeyed_actual)]
          
         # Now for each unmatched element we try to get the 'deepest'
         # difference and report that (presumably it's the more useful
@@ -223,7 +223,7 @@ class ChildDiffingMixing(object):
                     diffs += node.different("unexpected value: %r" % ua)
 
         # And finally, add all missing expectations:
-        for path in set(unmatched_expected.keys() + dict(keyed_expected).keys()) - set(dict(unmatched_actual + keyed_actual).keys()):
+        for path in set(list(unmatched_expected.keys()) + list(dict(keyed_expected).keys())) - set(dict(unmatched_actual + keyed_actual).keys()):
             with self.diffing_child(path) as node:
                 expected_object = dict(expected_children)[path]
                 diffs += node.different("expected %r, got nothing" % (expected_object,))
@@ -246,5 +246,15 @@ class DiffDicts(ChildDiffingMixing, ImplementationBase):
     diffs_types = dict
 
     def path_and_child(self, diffable):
-        for key, child in diffable.iteritems():
+        for key, child in diffable.items():
             yield "[%r]" % key, child
+
+
+class DiffSet(ChildDiffingMixing, ImplementationBase):
+    diffs_types = set
+
+    def path_and_child(self, diffable):
+        lst = list(diffable)
+        lst.sort()
+        for i, child in enumerate(lst):
+            yield "[%r]" % i, child

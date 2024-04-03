@@ -30,5 +30,6 @@ def make_differ(*implementations):
                     impl.DiffText,
                     impl.DiffLists,
                     impl.DiffDicts,
+                    impl.DiffSet,
                     *implementations
             )
